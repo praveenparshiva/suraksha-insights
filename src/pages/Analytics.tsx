@@ -1,5 +1,9 @@
+import { useState } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   BarChart,
@@ -20,11 +24,20 @@ import {
   PieChart as PieChartIcon,
   BarChart3,
   Calendar,
+  Download,
+  FileText,
+  Table,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export function Analytics() {
   const { state } = useApp();
   const { customers, monthlyIncome } = state;
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"csv" | "pdf">("csv");
+  const [exportMonth, setExportMonth] = useState<string>("all");
+  const [exportYear, setExportYear] = useState<string>("all");
 
   // Prepare monthly income data for chart
   const monthlyData = Object.entries(monthlyIncome)
@@ -89,6 +102,128 @@ export function Analytics() {
       return acc;
     }, [] as Array<{ month: string; customers: number; income: number }>)
     .sort((a, b) => a.month.localeCompare(b.month));
+
+  // Export functionality
+  const getFilteredCustomers = () => {
+    if (exportMonth === "all" && exportYear === "all") {
+      return customers;
+    }
+    
+    return customers.filter((customer) => {
+      const serviceDate = new Date(customer.serviceDate);
+      const customerMonth = serviceDate.getMonth() + 1;
+      const customerYear = serviceDate.getFullYear();
+      
+      const monthMatch = exportMonth === "all" || customerMonth === parseInt(exportMonth);
+      const yearMatch = exportYear === "all" || customerYear === parseInt(exportYear);
+      
+      return monthMatch && yearMatch;
+    });
+  };
+
+  const generateCSV = () => {
+    const filteredCustomers = getFilteredCustomers();
+    
+    const headers = [
+      "Customer Name",
+      "Phone",
+      "Address", 
+      "Service Date",
+      "Service Type",
+      "Price (₹)",
+      "Notes"
+    ];
+    
+    const rows = filteredCustomers.map((customer) => [
+      customer.name,
+      customer.phone,
+      customer.address,
+      customer.serviceDate,
+      customer.serviceType === 'Other' && customer.customServiceType 
+        ? customer.customServiceType 
+        : customer.serviceType,
+      customer.price.toString(),
+      customer.notes || ""
+    ]);
+    
+    // Calculate totals
+    const totalSpent = filteredCustomers.reduce((sum, customer) => sum + customer.price, 0);
+    const avgService = filteredCustomers.length > 0 ? totalSpent / filteredCustomers.length : 0;
+    
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(",")),
+      "",
+      `"Total Services","${filteredCustomers.length}"`,
+      `"Total Income","₹${totalSpent.toLocaleString("en-IN")}"`,
+      `"Average Service Value","₹${Math.round(avgService).toLocaleString("en-IN")}"`
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `suraksha-data-${exportMonth}-${exportYear}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const generatePDF = () => {
+    const filteredCustomers = getFilteredCustomers();
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.text("Suraksha Services - Data Export", 20, 20);
+    
+    // Date range info
+    doc.setFontSize(12);
+    const dateRange = `${exportMonth === "all" ? "All Months" : `Month: ${exportMonth}`}, ${exportYear === "all" ? "All Years" : `Year: ${exportYear}`}`;
+    doc.text(dateRange, 20, 35);
+    
+    // Customer data table
+    autoTable(doc, {
+      head: [["Customer Name", "Phone", "Service Date", "Service Type", "Price (₹)", "Notes"]],
+      body: filteredCustomers.map((customer) => [
+        customer.name,
+        customer.phone,
+        customer.serviceDate,
+        customer.serviceType === 'Other' && customer.customServiceType 
+          ? customer.customServiceType 
+          : customer.serviceType,
+        customer.price.toLocaleString("en-IN"),
+        customer.notes || ""
+      ]),
+      startY: 45,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185] }
+    });
+    
+    // Summary
+    const totalSpent = filteredCustomers.reduce((sum, customer) => sum + customer.price, 0);
+    const avgService = filteredCustomers.length > 0 ? totalSpent / filteredCustomers.length : 0;
+    
+    const finalY = (doc as any).lastAutoTable.finalY + 20;
+    doc.setFontSize(12);
+    doc.text(`Total Services: ${filteredCustomers.length}`, 20, finalY);
+    doc.text(`Total Income: ₹${totalSpent.toLocaleString("en-IN")}`, 20, finalY + 10);
+    doc.text(`Average Service Value: ₹${Math.round(avgService).toLocaleString("en-IN")}`, 20, finalY + 20);
+    
+    doc.save(`suraksha-data-${exportMonth}-${exportYear}.pdf`);
+  };
+
+  const handleExport = () => {
+    if (exportFormat === "csv") {
+      generateCSV();
+    } else {
+      generatePDF();
+    }
+    setIsExportDialogOpen(false);
+  };
+
+  // Get available months and years for filter
+  const availableMonths = Array.from(new Set(customers.map(c => new Date(c.serviceDate).getMonth() + 1))).sort();
+  const availableYears = Array.from(new Set(customers.map(c => new Date(c.serviceDate).getFullYear()))).sort();
 
   return (
     <div className="p-4 pb-20 space-y-6 min-h-screen bg-gradient-to-b from-background to-accent/5">
@@ -284,6 +419,102 @@ export function Analytics() {
           </div>
         </Card>
       </div>
+
+      {/* Export Data Section */}
+      <Card className="p-6 bg-gradient-to-br from-card to-accent/5 border-2 border-card-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm mb-16">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Download className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">
+              Export Data
+            </h3>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Export your service data for backup or sharing. Choose your preferred format and date range.
+          </p>
+          
+          <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="w-full" variant="default">
+                <Download className="h-4 w-4 mr-2" />
+                Export Data
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Export Service Data</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Export Format</label>
+                  <Select value={exportFormat} onValueChange={(value: "csv" | "pdf") => setExportFormat(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="csv">
+                        <div className="flex items-center gap-2">
+                          <Table className="h-4 w-4" />
+                          CSV (Spreadsheet)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pdf">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          PDF (Document)
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Month</label>
+                    <Select value={exportMonth} onValueChange={setExportMonth}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Months</SelectItem>
+                        {availableMonths.map((month) => (
+                          <SelectItem key={month} value={month.toString()}>
+                            {new Date(2024, month - 1).toLocaleDateString("en-IN", { month: "long" })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Year</label>
+                    <Select value={exportYear} onValueChange={setExportYear}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Years</SelectItem>
+                        {availableYears.map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Button onClick={handleExport} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export {exportFormat.toUpperCase()} File
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </Card>
     </div>
   );
 }
