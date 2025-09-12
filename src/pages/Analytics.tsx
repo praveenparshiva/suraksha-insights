@@ -130,19 +130,19 @@ export function Analytics() {
       "Address", 
       "Service Date",
       "Service Type",
-      "Price (₹)",
+      "Price (INR)",
       "Notes"
     ];
     
     const rows = filteredCustomers.map((customer) => [
       customer.name,
-      customer.phone,
+      `+91${customer.phone}`, // Format phone as text string with country code
       customer.address,
       customer.serviceDate,
       customer.serviceType === 'Other' && customer.customServiceType 
         ? customer.customServiceType 
         : customer.serviceType,
-      customer.price.toString(),
+      `₹${customer.price.toLocaleString("en-IN")}`, // Format as currency text
       customer.notes || ""
     ]);
     
@@ -159,7 +159,9 @@ export function Analytics() {
       `"Average Service Value","₹${Math.round(avgService).toLocaleString("en-IN")}"`
     ].join("\n");
     
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    // Use UTF-8 BOM to ensure proper character encoding
+    const csvContentWithBOM = '\uFEFF' + csvContent;
+    const blob = new Blob([csvContentWithBOM], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -183,15 +185,15 @@ export function Analytics() {
     
     // Customer data table
     autoTable(doc, {
-      head: [["Customer Name", "Phone", "Service Date", "Service Type", "Price (₹)", "Notes"]],
+      head: [["Customer Name", "Phone", "Service Date", "Service Type", "Price (INR)", "Notes"]],
       body: filteredCustomers.map((customer) => [
         customer.name,
-        customer.phone,
+        `+91${customer.phone}`, // Format phone as text string with country code
         customer.serviceDate,
         customer.serviceType === 'Other' && customer.customServiceType 
           ? customer.customServiceType 
           : customer.serviceType,
-        customer.price.toLocaleString("en-IN"),
+        `₹${customer.price.toLocaleString("en-IN")}`, // Format as currency text
         customer.notes || ""
       ]),
       startY: 45,
