@@ -3,7 +3,8 @@ import { CustomerRecord } from "@/contexts/AppContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, CheckCircle, Clock } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Trash2, Edit, CheckCircle, Clock, History } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface CustomerCardProps {
@@ -35,7 +36,7 @@ export function CustomerCard({ customer, onDelete, onEdit }: CustomerCardProps) 
   };
 
   return (
-    <Card className="p-4 space-y-3 bg-card border-border/50 shadow-sm hover:shadow-md transition-all duration-300 relative">
+    <Card className="p-6 space-y-4 bg-gradient-to-br from-card to-accent/5 border-2 border-card-border rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 relative backdrop-blur-sm">
       {/* Action buttons */}
       <div className="absolute top-2 right-2 flex gap-1">
         {onEdit && (
@@ -132,6 +133,67 @@ export function CustomerCard({ customer, onDelete, onEdit }: CustomerCardProps) 
       {customer.notes && (
         <div className="pt-2 border-t border-border/30">
           <p className="text-sm text-muted-foreground">{customer.notes}</p>
+        </div>
+      )}
+      
+      {/* Customer History */}
+      {customer.history && customer.history.length > 0 && (
+        <div className="pt-2 border-t border-border/30">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="history" className="border-none">
+              <AccordionTrigger className="py-2 px-0 hover:no-underline">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <History className="h-4 w-4" />
+                  Service History ({customer.history.length})
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-0 pb-2">
+                <div className="space-y-3">
+                  {customer.history.map((entry, index) => (
+                    <div key={index} className="bg-gradient-to-br from-accent/40 to-accent/20 rounded-xl p-4 space-y-2 border-2 border-card-border backdrop-blur-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getServiceBadgeVariant(entry.serviceType)} className="text-xs">
+                            {entry.serviceType === 'Other' && entry.customServiceType 
+                              ? entry.customServiceType 
+                              : entry.serviceType}
+                          </Badge>
+                          {entry.paymentStatus && (
+                            <Badge variant={entry.paymentStatus === 'Paid' ? 'default' : 'secondary'} className="text-xs">
+                              {entry.paymentStatus}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold text-primary">
+                          ₹{entry.price.toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{formatDate(entry.date)}</span>
+                        
+                        {entry.reminderSent ? (
+                          <div className="flex items-center gap-1 text-success">
+                            <CheckCircle className="h-3 w-3" />
+                            <span>Reminder Sent</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>No Reminder</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {entry.notes && (
+                        <p className="text-xs text-muted-foreground mt-1">{entry.notes}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       )}
     </Card>

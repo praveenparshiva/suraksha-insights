@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Save, User, Phone, MapPin, Calendar, IndianRupee, Droplets } from "lucide-react";
 
@@ -75,15 +76,18 @@ export function AddService() {
   return (
     <div className="p-4 pb-20 min-h-screen bg-gradient-to-b from-background to-accent/5">
       <div className="space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto">
+        <div className="text-center space-y-2 relative">
+          <div className="absolute top-0 right-0">
+            <ThemeToggle />
+          </div>
+          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-glow rounded-full flex items-center justify-center mx-auto shadow-xl">
             <Droplets className="h-8 w-8 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Add New Service</h1>
           <p className="text-muted-foreground">Record a new customer service</p>
         </div>
 
-        <Card className="p-6 space-y-6 bg-card border-border/50 shadow-lg">
+        <Card className="p-6 space-y-6 bg-gradient-to-br from-card to-accent/5 border-2 border-card-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Customer Information */}
             <div className="space-y-4">

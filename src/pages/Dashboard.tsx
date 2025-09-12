@@ -5,6 +5,7 @@ import { CustomerCard } from "@/components/CustomerCard";
 import { SearchFilters } from "@/components/SearchFilters";
 import { UpcomingServices } from "@/components/UpcomingServices";
 import { EditServiceForm } from "@/components/EditServiceForm";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Droplets } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -147,6 +148,9 @@ export function Dashboard() {
                 })}
               </p>
             </div>
+            
+            {/* Theme Toggle */}
+            <ThemeToggle />
           </div>
         </div>
       </div>
@@ -179,7 +183,7 @@ export function Dashboard() {
 
         <div className="space-y-3">
           {filteredCustomers.length === 0 ? (
-            <Card className="p-8 text-center">
+            <Card className="p-8 text-center bg-gradient-to-br from-card to-accent/5 rounded-2xl shadow-lg border-2 border-card-border">
               <Droplets className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">
                 {customers.length === 0

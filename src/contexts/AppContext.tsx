@@ -1,5 +1,16 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
+export interface ServiceHistoryEntry {
+  date: string;
+  serviceType: 'Sump' | 'Tank' | 'Both' | 'Other';
+  customServiceType?: string;
+  price: number;
+  paymentStatus?: 'Paid' | 'Pending';
+  reminderSent?: boolean;
+  reminderSentAt?: string;
+  notes?: string;
+}
+
 export interface CustomerRecord {
   id: string;
   name: string;
@@ -13,6 +24,7 @@ export interface CustomerRecord {
   nextServiceDate?: string;
   reminderSent?: boolean;
   reminderSentAt?: string;
+  history?: ServiceHistoryEntry[];
 }
 
 interface AppState {
@@ -140,10 +152,44 @@ function appReducer(state: AppState, action: AppAction): AppState {
   
   switch (action.type) {
     case 'ADD_CUSTOMER':
-      newState = {
-        ...state,
-        customers: [action.payload, ...state.customers],
-      };
+      // Check if customer already exists (by id or phone)
+      const existingCustomerIndex = state.customers.findIndex(
+        customer => customer.id === action.payload.id || customer.phone === action.payload.phone
+      );
+      
+      if (existingCustomerIndex >= 0) {
+        // Customer exists - move current service to history and update with new service
+        const existingCustomer = state.customers[existingCustomerIndex];
+        const currentServiceEntry: ServiceHistoryEntry = {
+          date: existingCustomer.serviceDate,
+          serviceType: existingCustomer.serviceType,
+          customServiceType: existingCustomer.customServiceType,
+          price: existingCustomer.price,
+          paymentStatus: 'Paid', // Assume past services are paid
+          reminderSent: existingCustomer.reminderSent,
+          reminderSentAt: existingCustomer.reminderSentAt,
+          notes: existingCustomer.notes
+        };
+        
+        const updatedCustomer: CustomerRecord = {
+          ...action.payload,
+          history: [currentServiceEntry, ...(existingCustomer.history || [])]
+        };
+        
+        newState = {
+          ...state,
+          customers: [
+            updatedCustomer,
+            ...state.customers.filter((_, index) => index !== existingCustomerIndex)
+          ],
+        };
+      } else {
+        // New customer
+        newState = {
+          ...state,
+          customers: [action.payload, ...state.customers],
+        };
+      }
       saveToStorage(newState.customers);
       return newState;
       
@@ -191,34 +237,69 @@ function appReducer(state: AppState, action: AppAction): AppState {
       const currentMonth = currentDate.getMonth();
       const currentYear = currentDate.getFullYear();
       
-      // Filter customers for current month/year calculations
-      const currentMonthCustomers = state.customers.filter(customer => {
-        const serviceDate = new Date(customer.serviceDate);
-        return serviceDate.getMonth() === currentMonth && serviceDate.getFullYear() === currentYear;
-      });
+      // Helper function to calculate total price including history
+      const calculateCustomerTotalPrice = (customer: CustomerRecord): number => {
+        const currentPrice = customer.price;
+        const historyPrice = customer.history?.reduce((sum, entry) => sum + entry.price, 0) || 0;
+        return currentPrice + historyPrice;
+      };
+
+      // Helper function to get all services (current + history) for a customer
+      const getAllCustomerServices = (customer: CustomerRecord) => {
+        const services = [
+          {
+            date: customer.serviceDate,
+            price: customer.price
+          }
+        ];
+        
+        if (customer.history) {
+          services.push(...customer.history.map(entry => ({
+            date: entry.date,
+            price: entry.price
+          })));
+        }
+        
+        return services;
+      };
       
-      // Filter customers for current week calculations
-      const currentWeekCustomers = state.customers.filter(customer => {
-        const serviceDate = new Date(customer.serviceDate);
-        const weekStart = new Date(currentDate);
-        weekStart.setDate(currentDate.getDate() - currentDate.getDay());
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        return serviceDate >= weekStart && serviceDate <= weekEnd;
-      });
+      // Calculate total income (all services ever)
+      const totalIncome = state.customers.reduce((sum, customer) => {
+        return sum + calculateCustomerTotalPrice(customer);
+      }, 0);
       
-      const totalIncome = state.customers.reduce((sum, customer) => sum + customer.price, 0);
-      
+      // Calculate monthly income including history
       const monthlyIncome: Record<string, number> = {};
       state.customers.forEach(customer => {
-        const month = customer.serviceDate.substring(0, 7); // YYYY-MM format
-        monthlyIncome[month] = (monthlyIncome[month] || 0) + customer.price;
+        const allServices = getAllCustomerServices(customer);
+        allServices.forEach(service => {
+          const month = service.date.substring(0, 7); // YYYY-MM format
+          monthlyIncome[month] = (monthlyIncome[month] || 0) + service.price;
+        });
       });
 
-      const weeklyIncome = currentWeekCustomers.reduce((sum, customer) => sum + customer.price, 0);
-      const dailyIncome = state.customers
-        .filter(customer => customer.serviceDate === currentDate.toISOString().split('T')[0])
-        .reduce((sum, customer) => sum + customer.price, 0);
+      // Calculate weekly income including history
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      const weeklyIncome = state.customers.reduce((sum, customer) => {
+        const allServices = getAllCustomerServices(customer);
+        const weekServices = allServices.filter(service => {
+          const serviceDate = new Date(service.date);
+          return serviceDate >= weekStart && serviceDate <= weekEnd;
+        });
+        return sum + weekServices.reduce((serviceSum, service) => serviceSum + service.price, 0);
+      }, 0);
+
+      // Calculate daily income including history
+      const todayString = currentDate.toISOString().split('T')[0];
+      const dailyIncome = state.customers.reduce((sum, customer) => {
+        const allServices = getAllCustomerServices(customer);
+        const todayServices = allServices.filter(service => service.date === todayString);
+        return sum + todayServices.reduce((serviceSum, service) => serviceSum + service.price, 0);
+      }, 0);
       
       return {
         ...state,

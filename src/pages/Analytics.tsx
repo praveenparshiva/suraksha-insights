@@ -1,5 +1,6 @@
 import { useApp } from "@/contexts/AppContext";
 import { Card } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   BarChart,
   Bar,
@@ -92,8 +93,11 @@ export function Analytics() {
   return (
     <div className="p-4 pb-20 space-y-6 min-h-screen bg-gradient-to-b from-background to-accent/5">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="w-16 h-16 bg-gradient-to-br from-secondary to-secondary-glow rounded-full flex items-center justify-center mx-auto">
+      <div className="text-center space-y-2 relative">
+        <div className="absolute top-0 right-0">
+          <ThemeToggle />
+        </div>
+        <div className="w-16 h-16 bg-gradient-to-br from-secondary to-secondary-glow rounded-full flex items-center justify-center mx-auto shadow-xl">
           <BarChart3 className="h-8 w-8 text-secondary-foreground" />
         </div>
         <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
@@ -101,7 +105,7 @@ export function Analytics() {
       </div>
 
       {/* Monthly Income Chart */}
-      <Card className="p-6 bg-card border-border/50 shadow-lg">
+      <Card className="p-6 bg-gradient-to-br from-card to-accent/5 border-2 border-card-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
@@ -145,7 +149,7 @@ export function Analytics() {
       </Card>
 
       {/* Service Type Distribution */}
-      <Card className="p-6 bg-card border-border/50 shadow-lg">
+      <Card className="p-6 bg-gradient-to-br from-card to-accent/5 border-2 border-card-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <PieChartIcon className="h-5 w-5 text-secondary" />
@@ -195,7 +199,7 @@ export function Analytics() {
       </Card>
 
       {/* Performance Trend */}
-      <Card className="p-6 bg-card border-border/50 shadow-lg">
+      <Card className="p-6 bg-gradient-to-br from-card to-accent/5 border-2 border-card-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
@@ -254,8 +258,8 @@ export function Analytics() {
       </Card>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
+      <div className="grid grid-cols-2 gap-4 mb-16">
+        <Card className="p-6 bg-gradient-to-br from-success/5 to-success/10 border-2 border-success/30 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
           <div className="text-center space-y-1">
             <p className="text-sm font-medium text-success">Total Services</p>
             <p className="text-2xl font-bold text-success">
@@ -264,7 +268,7 @@ export function Analytics() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+        <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/30 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
           <div className="text-center space-y-1">
             <p className="text-sm font-medium text-primary">
               Avg. Service Value

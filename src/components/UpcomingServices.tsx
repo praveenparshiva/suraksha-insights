@@ -123,7 +123,7 @@ export function UpcomingServices({
 
   if (upcomingCustomers.length === 0) {
     return (
-      <Card className="p-6 text-center">
+      <Card className="p-8 text-center bg-gradient-to-br from-card to-accent/5 rounded-2xl shadow-lg border-border/50">
         <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-foreground mb-2">
           No Upcoming Services
@@ -165,7 +165,7 @@ export function UpcomingServices({
           const urgencyColor = getUrgencyColor(daysDiff);
 
           return (
-            <Card key={customer.id} className="p-4 relative overflow-hidden">
+            <Card key={customer.id} className="p-6 relative overflow-hidden bg-gradient-to-br from-card to-accent/5 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 border-2 border-card-border backdrop-blur-sm">
               {/* Urgency indicator */}
               {urgencyColor !== "transparent" && (
                 <div
