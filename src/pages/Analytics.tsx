@@ -1,6 +1,5 @@
 import { useApp } from "@/contexts/AppContext";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   BarChart,
@@ -21,10 +20,7 @@ import {
   PieChart as PieChartIcon,
   BarChart3,
   Calendar,
-  FileDown,
 } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export function Analytics() {
   const { state } = useApp();
@@ -67,161 +63,6 @@ export function Analytics() {
       Other: "#008080", // Teal for custom services
     };
     return colorMap[serviceType] || "hsl(var(--accent))";
-  };
-
-  // PDF Export Function
-  const generatePDFReport = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    const margin = 20;
-    let yPosition = margin;
-
-    // Title
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text("Suraksha Service Analytics Report", pageWidth / 2, yPosition, { align: "center" });
-    yPosition += 20;
-
-    // Report Date
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Generated on: ${new Date().toLocaleDateString("en-IN")}`, pageWidth / 2, yPosition, { align: "center" });
-    yPosition += 20;
-
-    // Business Summary Section
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("Business Summary", margin, yPosition);
-    yPosition += 15;
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Total Services (All-time): ${customers.length}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Total Income: ₹${state.totalIncome.toLocaleString("en-IN")}`, margin, yPosition);
-    yPosition += 8;
-    
-    const avgServiceValue = customers.length > 0 ? Math.round(state.totalIncome / customers.length) : 0;
-    doc.text(`Average Service Value: ₹${avgServiceValue.toLocaleString("en-IN")}`, margin, yPosition);
-    yPosition += 15;
-
-    // Monthly Income Summary
-    if (monthlyData.length > 0) {
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Monthly Income Summary", margin, yPosition);
-      yPosition += 10;
-
-      const monthlyTableData = monthlyData.map(item => [
-        item.month,
-        `₹${item.income.toLocaleString("en-IN")}`
-      ]);
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [["Month", "Income"]],
-        body: monthlyTableData,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [66, 139, 202] },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
-    }
-
-    // Service Distribution
-    if (serviceTypeData.length > 0) {
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("Service Distribution", margin, yPosition);
-      yPosition += 10;
-
-      const serviceTableData = serviceTypeData.map(item => [
-        item.name,
-        item.value.toString(),
-        `₹${item.income.toLocaleString("en-IN")}`
-      ]);
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [["Service Type", "Count", "Total Income"]],
-        body: serviceTableData,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [66, 139, 202] },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
-    }
-
-    // Check if we need a new page
-    if (yPosition > 200) {
-      doc.addPage();
-      yPosition = margin;
-    }
-
-    // Customer Details Section
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("Customer Details", margin, yPosition);
-    yPosition += 15;
-
-    if (customers.length > 0) {
-      const customerTableData = customers.map(customer => [
-        customer.name,
-        `+91${customer.phone}`,
-        customer.address,
-        customer.serviceDate,
-        customer.serviceType,
-        `₹${customer.price.toLocaleString("en-IN")}`,
-        "Completed", // Default payment status since it's not in the data model
-        customer.nextServiceDate || "N/A"
-      ]);
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [["Name", "Phone", "Address", "Service Date", "Type", "Price", "Payment", "Next Service"]],
-        body: customerTableData,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [66, 139, 202] },
-        columnStyles: {
-          2: { cellWidth: 25 }, // Address column
-          0: { cellWidth: 20 }, // Name column
-        },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
-    }
-
-    // Analytics Snapshot
-    const currentMonth = new Date().toISOString().substring(0, 7);
-    const thisMonthCustomers = customers.filter(c => c.serviceDate.startsWith(currentMonth));
-    const thisMonthIncome = thisMonthCustomers.reduce((sum, c) => sum + c.price, 0);
-    const topServiceType = serviceTypeData.length > 0 ? serviceTypeData.reduce((a, b) => a.value > b.value ? a : b).name : "N/A";
-
-    // Check if we need a new page for analytics snapshot
-    if (yPosition > 230) {
-      doc.addPage();
-      yPosition = margin;
-    }
-
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("Analytics Snapshot", margin, yPosition);
-    yPosition += 15;
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Top Service Type: ${topServiceType}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Customers This Month: ${thisMonthCustomers.length}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`This Month's Income: ₹${thisMonthIncome.toLocaleString("en-IN")}`, margin, yPosition);
-
-    // Save the PDF
-    const fileName = `Suraksha_Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
   };
 
   // Recent performance (last 6 months)
@@ -443,26 +284,6 @@ export function Analytics() {
           </div>
         </Card>
       </div>
-
-      {/* Export Data Card */}
-      <Card className="p-6 bg-gradient-to-br from-card to-accent/5 border-2 border-card-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center mx-auto shadow-lg">
-            <FileDown className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-foreground">Export Business Report</h3>
-            <p className="text-sm text-muted-foreground">Generate a comprehensive PDF report with all your business analytics and customer data</p>
-          </div>
-          <Button 
-            onClick={generatePDFReport}
-            className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl font-medium"
-          >
-            <FileDown className="h-4 w-4 mr-2" />
-            Export Data as PDF
-          </Button>
-        </div>
-      </Card>
     </div>
   );
 }
