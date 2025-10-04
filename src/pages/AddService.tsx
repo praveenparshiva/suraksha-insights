@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { Save, User, Phone, MapPin, Calendar, IndianRupee, Droplets } from "lucide-react";
+import { syncWithN8n } from "@/lib/n8n-sync";
 
 export function AddService() {
   const { dispatch } = useApp();
@@ -26,7 +27,7 @@ export function AddService() {
     nextServiceDate: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.phone || !formData.address || !formData.serviceType || !formData.price) {
@@ -58,6 +59,22 @@ export function AddService() {
       title: "Service Added",
       description: `New service record for ${formData.name} has been created`,
     });
+
+    // Sync with n8n automation
+    const synced = await syncWithN8n(newCustomer);
+    
+    if (synced) {
+      toast({
+        title: "Data synced with Suraksha Automation ✅",
+        description: "Service data sent to automation workflow",
+      });
+    } else {
+      toast({
+        title: "Could not sync with automation ⚠️",
+        description: "Service saved locally, but automation sync failed",
+        variant: "destructive"
+      });
+    }
 
     // Reset form
     setFormData({

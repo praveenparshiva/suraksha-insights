@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Save, User, Phone, MapPin, Droplets } from "lucide-react";
+import { syncWithN8n } from "@/lib/n8n-sync";
+import { useToast } from "@/hooks/use-toast";
 
 interface EditServiceFormProps {
   customer: CustomerRecord | null;
@@ -17,6 +19,7 @@ interface EditServiceFormProps {
 }
 
 export function EditServiceForm({ customer, isOpen, onClose, onSave }: EditServiceFormProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -45,7 +48,7 @@ export function EditServiceForm({ customer, isOpen, onClose, onSave }: EditServi
     }
   }, [customer]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!customer || !formData.name || !formData.phone || !formData.address || !formData.serviceType || !formData.price) {
@@ -66,6 +69,23 @@ export function EditServiceForm({ customer, isOpen, onClose, onSave }: EditServi
     };
 
     onSave(updatedCustomer);
+
+    // Sync with n8n automation
+    const synced = await syncWithN8n(updatedCustomer);
+    
+    if (synced) {
+      toast({
+        title: "Data synced with Suraksha Automation ✅",
+        description: "Updated service data sent to automation",
+      });
+    } else {
+      toast({
+        title: "Could not sync with automation ⚠️",
+        description: "Changes saved locally, but automation sync failed",
+        variant: "destructive"
+      });
+    }
+
     onClose();
   };
 
