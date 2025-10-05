@@ -1,6 +1,9 @@
 import { useApp } from "@/contexts/AppContext";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -20,11 +23,68 @@ import {
   PieChart as PieChartIcon,
   BarChart3,
   Calendar,
+  Upload,
 } from "lucide-react";
 
 export function Analytics() {
   const { state } = useApp();
   const { customers, monthlyIncome } = state;
+  const { toast } = useToast();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Sync analytics data to Google Sheet via n8n webhook
+  const syncAnalyticsToSheet = async () => {
+    if (customers.length === 0) {
+      toast({
+        title: "⚠️ No data to sync",
+        description: "Please add at least one service before syncing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+
+    try {
+      // Send each customer record to the webhook
+      const promises = customers.map((customer) => {
+        const payload = {
+          ID: customer.id,
+          Name: customer.name,
+          Phone: customer.phone,
+          Address: customer.address,
+          "Service Type": customer.customServiceType || customer.serviceType,
+          Price: customer.price,
+          "Service Date": customer.serviceDate,
+          "Next Service Date": customer.nextServiceDate || "",
+          Notes: customer.notes || "",
+          Status: customer.nextServiceDate ? "Active" : "Completed",
+        };
+
+        return fetch("https://n8n-jta9.onrender.com/webhook/suraksha-data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      });
+
+      await Promise.all(promises);
+
+      toast({
+        title: "✅ Synced successfully",
+        description: `${customers.length} record(s) synced to Google Sheet`,
+      });
+    } catch (err) {
+      console.error("Sync error:", err);
+      toast({
+        title: "⚠️ Couldn't sync to Google Sheet",
+        description: "Please check your connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Prepare monthly income data for chart
   const monthlyData = Object.entries(monthlyIncome)
@@ -258,7 +318,7 @@ export function Analytics() {
       </Card>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-16">
+      <div className="grid grid-cols-2 gap-4">
         <Card className="p-6 bg-gradient-to-br from-success/5 to-success/10 border-2 border-success/30 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
           <div className="text-center space-y-1">
             <p className="text-sm font-medium text-success">Total Services</p>
@@ -284,6 +344,38 @@ export function Analytics() {
           </div>
         </Card>
       </div>
+
+      {/* Sync to Google Sheet Button */}
+      <Card className="p-6 bg-gradient-to-br from-card to-accent/5 border-2 border-card-border rounded-2xl shadow-lg mb-16">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Upload className="h-5 w-5 text-success" />
+            <h3 className="text-lg font-semibold text-foreground">
+              Export to Google Sheet
+            </h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Sync all customer records to your connected Google Sheet via automation workflow
+          </p>
+          <Button
+            onClick={syncAnalyticsToSheet}
+            disabled={isSyncing || customers.length === 0}
+            className="w-full bg-success hover:bg-success/90 text-white font-semibold rounded-xl h-12 shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
+          >
+            {isSyncing ? (
+              <>
+                <Upload className="mr-2 h-5 w-5 animate-pulse" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-5 w-5" />
+                📤 Sync to Google Sheet
+              </>
+            )}
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }
