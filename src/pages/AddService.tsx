@@ -55,6 +55,11 @@ export function AddService() {
 
     dispatch({ type: 'ADD_CUSTOMER', payload: newCustomer });
     
+    toast({
+      title: "Service Added Successfully",
+      description: `New service record for ${formData.name} has been created`,
+    });
+
     // Sync with n8n automation silently
     await syncWithN8n(newCustomer);
 

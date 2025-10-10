@@ -70,6 +70,11 @@ export function EditServiceForm({ customer, isOpen, onClose, onSave }: EditServi
 
     onSave(updatedCustomer);
 
+    toast({
+      title: "Service Updated Successfully",
+      description: "Changes have been saved",
+    });
+
     // Sync with n8n automation silently
     await syncWithN8n(updatedCustomer);
 
