@@ -55,26 +55,8 @@ export function AddService() {
 
     dispatch({ type: 'ADD_CUSTOMER', payload: newCustomer });
     
-    toast({
-      title: "Service Added",
-      description: `New service record for ${formData.name} has been created`,
-    });
-
-    // Sync with n8n automation
-    const synced = await syncWithN8n(newCustomer);
-    
-    if (synced) {
-      toast({
-        title: "Data synced with Suraksha Automation ✅",
-        description: "Service data sent to automation workflow",
-      });
-    } else {
-      toast({
-        title: "Could not sync with automation ⚠️",
-        description: "Service saved locally, but automation sync failed",
-        variant: "destructive"
-      });
-    }
+    // Sync with n8n automation silently
+    await syncWithN8n(newCustomer);
 
     // Reset form
     setFormData({

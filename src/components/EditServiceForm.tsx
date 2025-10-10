@@ -70,21 +70,8 @@ export function EditServiceForm({ customer, isOpen, onClose, onSave }: EditServi
 
     onSave(updatedCustomer);
 
-    // Sync with n8n automation
-    const synced = await syncWithN8n(updatedCustomer);
-    
-    if (synced) {
-      toast({
-        title: "Data synced with Suraksha Automation ✅",
-        description: "Updated service data sent to automation",
-      });
-    } else {
-      toast({
-        title: "Could not sync with automation ⚠️",
-        description: "Changes saved locally, but automation sync failed",
-        variant: "destructive"
-      });
-    }
+    // Sync with n8n automation silently
+    await syncWithN8n(updatedCustomer);
 
     onClose();
   };

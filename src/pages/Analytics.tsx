@@ -32,6 +32,17 @@ export function Analytics() {
   const { toast } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Get synced records from local storage
+  const getSyncedRecords = (): Set<string> => {
+    const synced = localStorage.getItem('syncedRecords');
+    return synced ? new Set(JSON.parse(synced)) : new Set();
+  };
+
+  // Save synced records to local storage
+  const saveSyncedRecords = (syncedIds: Set<string>) => {
+    localStorage.setItem('syncedRecords', JSON.stringify(Array.from(syncedIds)));
+  };
+
   // Sync analytics data to Google Sheet via Apps Script
   const syncAnalyticsToSheet = async () => {
     if (customers.length === 0) {
@@ -46,8 +57,23 @@ export function Analytics() {
     setIsSyncing(true);
 
     try {
-      // Send each customer record to Google Apps Script
-      const promises = customers.map((customer) => {
+      // Get already synced records
+      const syncedRecords = getSyncedRecords();
+      
+      // Filter out already synced customers
+      const unsyncedCustomers = customers.filter(customer => !syncedRecords.has(customer.id));
+      
+      if (unsyncedCustomers.length === 0) {
+        toast({
+          title: "✅ Already synced",
+          description: "All records are already synced to Google Sheet",
+        });
+        setIsSyncing(false);
+        return;
+      }
+
+      // Send only unsynced customer records to Google Apps Script
+      const promises = unsyncedCustomers.map((customer) => {
         const payload = {
           name: customer.name,
           phone: customer.phone,
@@ -69,9 +95,13 @@ export function Analytics() {
 
       await Promise.all(promises);
 
+      // Mark all synced customers as synced
+      unsyncedCustomers.forEach(customer => syncedRecords.add(customer.id));
+      saveSyncedRecords(syncedRecords);
+
       toast({
         title: "✅ Synced successfully!",
-        description: `${customers.length} record(s) synced to Google Sheet`,
+        description: `${unsyncedCustomers.length} new record(s) synced to Google Sheet`,
       });
     } catch (err) {
       console.error("Sync error:", err);
