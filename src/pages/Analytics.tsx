@@ -32,7 +32,7 @@ export function Analytics() {
   const { toast } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Sync analytics data to Google Sheet via n8n webhook
+  // Sync analytics data to Google Sheet via Apps Script
   const syncAnalyticsToSheet = async () => {
     if (customers.length === 0) {
       toast({
@@ -46,38 +46,37 @@ export function Analytics() {
     setIsSyncing(true);
 
     try {
-      // Send each customer record to the webhook
+      // Send each customer record to Google Apps Script
       const promises = customers.map((customer) => {
         const payload = {
-          ID: customer.id,
-          Name: customer.name,
-          Phone: customer.phone,
-          Address: customer.address,
-          "Service Type": customer.customServiceType || customer.serviceType,
-          Price: customer.price,
-          "Service Date": customer.serviceDate,
-          "Next Service Date": customer.nextServiceDate || "",
-          Notes: customer.notes || "",
-          Status: customer.nextServiceDate ? "Active" : "Completed",
+          name: customer.name,
+          phone: customer.phone,
+          address: customer.address,
+          serviceType: customer.customServiceType || customer.serviceType,
+          serviceDate: customer.serviceDate,
+          price: customer.price,
+          nextService: customer.nextServiceDate || "",
+          notes: customer.notes || ""
         };
 
-        return fetch("https://n8n-jta9.onrender.com/webhook/suraksha-data", {
+        return fetch("https://script.google.com/macros/s/AKfycbx7rJOgozvmw15fOoCguFmRCIuKZ1teHv71udSAwT57iWHj6NNpTrTlXL-Kxcy_Mv12qA/exec", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          mode: "no-cors"
         });
       });
 
       await Promise.all(promises);
 
       toast({
-        title: "✅ Synced successfully",
+        title: "✅ Synced successfully!",
         description: `${customers.length} record(s) synced to Google Sheet`,
       });
     } catch (err) {
       console.error("Sync error:", err);
       toast({
-        title: "⚠️ Couldn't sync to Google Sheet",
+        title: "⚠️ Sync failed",
         description: "Please check your connection and try again.",
         variant: "destructive",
       });
